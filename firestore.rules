@@ -1,0 +1,79 @@
+rules_version = '2';
+// Reglas COMPLETAS del proyecto cumbre-bdc-2026.
+// IMPORTANTE: al publicar, estas reglas reemplazan a las anteriores. Por eso incluyen
+// también las de "Respuestas en Vivo" (colección respuestas) sin cambios.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== Respuestas en Vivo (sin cambios) =====
+    match /respuestas/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['text','ts'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 10
+        && request.resource.data.text.size() <= 160
+        && request.resource.data.ts == request.time;
+      allow update, delete: if false;
+    }
+
+    // ===== Concurso de Mejores Prácticas BDC · Votación =====
+    // Administradoras: mismos correos que ADMINS en config.js
+    function esAdmin() {
+      return request.auth != null
+        && request.auth.token.email in ['nataliaricardezcdk@gmail.com'];
+    }
+    function ruta(col, id) { return /databases/$(database)/documents/$(col)/$(id); }
+    function cfg() { return get(ruta('config', 'votacion')).data; }
+    function enRango(x, n) { return x is int && x >= 0 && x < n; }
+    function boletaValida(p, n, modo) {
+      return p is list && (
+        (modo == 'top3' && p.size() == 3
+          && enRango(p[0], n) && enRango(p[1], n) && enRango(p[2], n)
+          && p[0] != p[1] && p[0] != p[2] && p[1] != p[2])
+        || (modo == 'unico' && p.size() == 1 && enRango(p[0], n))
+      );
+    }
+
+    // Estado de la votación y finalistas: todos leen, solo administración escribe.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // Código de 4 dígitos -> tipo de voto (dir | part) y agencia.
+    // Se puede consultar UN código por su número, pero nadie puede listar la colección.
+    match /codigos/{codigo} {
+      allow get: if true;
+      allow list, write: if esAdmin();
+    }
+
+    // Nombres de directivos y datos de control: solo administración.
+    match /padron/{codigo} {
+      allow read, write: if esAdmin();
+    }
+
+    // Marca pública de "este código ya votó" (no revela por quién votó).
+    match /usados/{codigo} {
+      allow get: if true;
+      allow list, delete: if esAdmin();
+      allow create: if existsAfter(ruta('votos', codigo))
+        && request.resource.data.keys().hasOnly(['ts'])
+        && request.resource.data.ts == request.time;
+      allow update: if false;
+    }
+
+    // Votos: un documento por código. "create" falla si el código ya votó,
+    // así que es imposible votar dos veces con el mismo código.
+    match /votos/{codigo} {
+      allow read, delete: if esAdmin();
+      allow create: if cfg().abierta == true
+        && exists(ruta('codigos', codigo))
+        && request.resource.data.keys().hasOnly(['seg','picks','ts'])
+        && request.resource.data.seg == get(ruta('codigos', codigo)).data.seg
+        && boletaValida(request.resource.data.picks, cfg().finalistas.size(), cfg().modo)
+        && request.resource.data.ts == request.time
+        && existsAfter(ruta('usados', codigo));
+      allow update: if false;
+    }
+  }
+}
