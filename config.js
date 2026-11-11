@@ -15,7 +15,7 @@ export const FIREBASE_CONFIG = {
 export const ADMINS = ["nataliaricardezcdk@gmail.com"];
 
 // Textos del evento.
-export const EVENTO = "Cumbre Líderes de BDC Kia México 2026";
+export const EVENTO = "Cumbre Nacional de Líderes BDC 2026";
 export const CONCURSO = "Concurso de Mejores Prácticas BDC";
 export const SEDE = "Kia Campus CDMX";
 
