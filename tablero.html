@@ -138,6 +138,31 @@ input[type=range]{width:100%;padding:0;border:0;accent-color:var(--acc);backgrou
 .pod .a{color:var(--mute)}
 .pod.g{min-height:16em}.pod.s{min-height:12em;animation-delay:.15s}.pod.bz{min-height:10em;animation-delay:.3s}
 @keyframes rise{from{opacity:0;transform:translateY(1.2em)}to{opacity:1;transform:none}}
+/* premiación: trofeo, medallas y podio */
+.aw{display:block;filter:drop-shadow(0 .6em 1.6em rgba(0,0,0,.45))}
+.place .aw{width:9em;height:auto;animation:pop .9s cubic-bezier(.2,1.4,.4,1) both}
+.place.p1 .aw{width:11.5em}
+.place .glow{position:absolute;width:26em;height:26em;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--mc) 32%,transparent) 0%,transparent 65%);z-index:-1;top:-6em;left:50%;transform:translateX(-50%)}
+.place{position:relative;isolation:isolate}
+.place .ld{display:inline-flex;align-items:center;gap:.6em;margin-top:.2em;padding:.45em 1.1em;border-radius:99em;background:rgba(255,255,255,.07);border:1px solid color-mix(in srgb,var(--mc) 55%,transparent);font-size:1.6em;font-weight:700}
+.place .ld small{font-size:.62em;letter-spacing:.16em;text-transform:uppercase;color:var(--mc);font-weight:800}
+.pod3{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:1.2em;align-items:end;width:100%;max-width:78em}
+.pcol{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.7em;animation:rise .9s ease-out both}
+.pcol.c2{animation-delay:.35s}.pcol.c3{animation-delay:.7s}.pcol.c1{animation-delay:1.05s}
+.pcol .aw{width:6.4em}.pcol.c1 .aw{width:8.6em}
+.pcol .t{font-size:1.75em;font-weight:800;line-height:1.12;text-wrap:balance}
+.pcol.c1 .t{font-size:2.15em}
+.pcol .a{font-size:1.2em;color:var(--tx);opacity:.85}
+.pcol .l{font-size:1.1em;font-weight:700;color:var(--mc)}
+.pcol .l small{display:block;font-size:.7em;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.pcol .pts{font-size:1em;color:var(--mute);font-variant-numeric:tabular-nums}
+.step{width:100%;border-radius:.6em .6em 0 0;background:linear-gradient(180deg,color-mix(in srgb,var(--mc) 38%,var(--panel)) 0%,var(--panel) 100%);border-top:.35em solid var(--mc);display:grid;place-items:start center;padding-top:.6em}
+.step span{font-size:4em;font-weight:900;color:var(--mc);line-height:1}
+.c1 .step{height:12em}.c2 .step{height:8.5em}.c3 .step{height:6em}
+#confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+#rev .rb{position:relative;z-index:2}
+@keyframes pop{0%{opacity:0;transform:scale(.4) rotate(-8deg)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.place .aw,.pcol{animation:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:820px){.scr{grid-template-columns:1fr}.podium{grid-template-columns:1fr}.cnts{grid-template-columns:1fr}}
 body.fs .top{display:none}body.fs .scr{min-height:100vh}
@@ -213,7 +238,7 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
       </div>
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h3>Jurado directivo</h3><span class="tag dir" id="tDir"></span></div>
-        <p class="hint">Un directivo por línea: <b>Nombre, Puesto</b>. Se genera un código de 4 dígitos que no choca con ninguna agencia. Sus nombres no son visibles para los votantes.</p>
+        <p class="hint">Un directivo por línea: <b>Nombre, Puesto</b>. Se genera un código de 4 dígitos que no choca con ninguna agencia. Si ya tienes tarjetas impresas, agrega su código: <b>Directivo 01, 1573</b>. Sus nombres no son visibles para los votantes.</p>
         <textarea id="gDir" placeholder="Nombre Apellido, Dirección Comercial&#10;Nombre Apellido, Gerencia de Red"></textarea>
         <div class="row"><button class="b pri" id="bDir">Generar códigos de directivos</button><button class="b" id="bTarj">Descargar tarjetas de directivos</button></div>
       </div>
@@ -294,9 +319,10 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
 
 <!-- ===== REVELACIÓN ===== -->
 <div id="rev" hidden>
+  <canvas id="confetti" aria-hidden="true"></canvas>
   <div class="rh"><div class="lg"><img class="kia" src="assets/logo-kia.png" alt="Kia" onerror="this.remove()"><span class="sep"></span><img class="cdk" src="assets/logo-cdk.png" alt="CDK Global" onerror="this.remove()"></div><div class="ev" id="revEv"></div></div>
   <div class="rb" id="revBody"></div>
-  <div class="rf"><span id="revInfo"></span><div class="row"><button class="b" id="rScores">Ocultar puntajes</button><button class="b" id="rPrev">Anterior</button><button class="b acc" id="rNext">Siguiente</button><button class="b" id="rExit">Salir (Esc)</button></div></div>
+  <div class="rf"><span id="revInfo"></span><div class="row"><button class="b" id="rPrev">Anterior</button><button class="b acc" id="rNext">Siguiente</button><button class="b" id="rExit">Salir (Esc)</button></div></div>
 </div>
 
 <script type="module">
@@ -457,7 +483,7 @@ async function register(entries, preBad = []) {
 }
 $("bAg").onclick = async () => { const { out, bad } = parseAg($("gAg").value); if (!out.length && !bad.length) { setMsg("gMsg", "err", "Pega al menos una línea: Agencia, código."); return; } if (await register(out, bad)) $("gAg").value = ""; };
 $("fCsv").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const { out, bad } = parseAg(String(r.result)); await register(out, bad); e.target.value = ""; }; r.readAsText(f, "utf-8"); };
-$("bDir").onclick = async () => { const ent = $("gDir").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const i = l.search(/[,;\t]/); return { seg: "dir", nombre: i < 0 ? l : l.slice(0, i).trim(), puesto: i < 0 ? "" : l.slice(i + 1).trim() }; }); if (!ent.length) { setMsg("gMsg", "err", "Escribe al menos un directivo: Nombre, Puesto."); return; } if (await register(ent)) $("gDir").value = ""; };
+$("bDir").onclick = async () => { const ent = $("gDir").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).filter(l => !/^(nombre|directivo)\s*[,;\t]\s*(puesto|c[oó]digo)/i.test(l)).map(l => { const parts = l.split(/[,;\t]/).map(x => x.trim()).filter(Boolean); const ci = parts.findIndex(x => /^\d{4}$/.test(x)); const code = ci >= 0 ? parts.splice(ci, 1)[0] : undefined; return { seg: "dir", nombre: parts[0] || "", puesto: parts.slice(1).join(", "), code }; }); if (!ent.length) { setMsg("gMsg", "err", "Escribe al menos un directivo: Nombre, Puesto."); return; } if (await register(ent)) $("gDir").value = ""; };
 $("bTest").onclick = async () => {
   const ent = [...Array.from({ length: 8 }, (_, i) => ({ seg: "part", agencia: "Agencia de prueba " + pad2(i + 1), prueba: true })), ...Array.from({ length: 4 }, (_, i) => ({ seg: "dir", nombre: "Directivo de prueba " + pad2(i + 1), puesto: "Prueba", prueba: true }))];
   await register(ent);
@@ -506,19 +532,56 @@ $("bActa").onclick = () => {
 };
 
 /* ---------- revelación: 3º → 2º → 1º → podio ---------- */
-let step = 0, showSc = true, RC = null;
+let step = 0, showSc = false, RC = null;
 const MED = [null, { c: "var(--gold)", l: "Primer lugar" }, { c: "var(--silver)", l: "Segundo lugar" }, { c: "var(--bronze)", l: "Tercer lugar" }];
+const METAL = { 1:["#8A6510","#FFE48A","#E3B649"], 2:["#7C8792","#F4F7FA","#C9D2DA"], 3:["#6E3F1E","#F3B988","#D08F5B"] };
+function awardSVG(pos){
+  const [d, l, m] = METAL[pos], g = "g" + pos + Math.random().toString(36).slice(2, 7);
+  const grad = `<defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${l}"/><stop offset=".5" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></linearGradient></defs>`;
+  if (pos === 1) return `<svg class="aw" viewBox="0 0 140 160" role="img" aria-label="Trofeo primer lugar">${grad}
+    <path d="M34 22H16c0 26 10 40 26 44" fill="none" stroke="url(#${g})" stroke-width="8" stroke-linecap="round"/>
+    <path d="M106 22h18c0 26-10 40-26 44" fill="none" stroke="url(#${g})" stroke-width="8" stroke-linecap="round"/>
+    <path d="M32 12h76v30c0 30-18 50-38 52-20-2-38-22-38-52z" fill="url(#${g})"/>
+    <path d="M44 20c0 26 8 42 20 48" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="5" stroke-linecap="round"/>
+    <rect x="62" y="92" width="16" height="22" fill="url(#${g})"/>
+    <rect x="44" y="112" width="52" height="10" rx="3" fill="url(#${g})"/>
+    <rect x="34" y="122" width="72" height="26" rx="4" fill="#0B2235" stroke="url(#${g})" stroke-width="3"/>
+    <text x="70" y="142" text-anchor="middle" font-size="19" font-weight="900" fill="${m}" font-family="inherit">1º</text>
+    <path d="M70 30l5.9 12 13.2 1.9-9.6 9.3 2.3 13.1L70 60.1l-11.8 6.2 2.3-13.1-9.6-9.3 13.2-1.9z" fill="#fff" fill-opacity=".9"/></svg>`;
+  return `<svg class="aw" viewBox="0 0 140 170" role="img" aria-label="Medalla ${pos}º lugar">${grad}
+    <path d="M40 0h26l14 56H54z" fill="#EA0029"/><path d="M100 0H74L60 56h26z" fill="#0E2A40"/>
+    <path d="M66 0h8l-4 16z" fill="#fff" fill-opacity=".25"/>
+    <circle cx="70" cy="108" r="54" fill="url(#${g})"/>
+    <circle cx="70" cy="108" r="42" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="3"/>
+    <path d="M38 84a42 42 0 0 1 30-18" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="5" stroke-linecap="round"/>
+    <text x="70" y="126" text-anchor="middle" font-size="52" font-weight="900" fill="${d}" font-family="inherit">${pos}</text></svg>`;
+}
+let confT = 0;
+function confetti(n){
+  const cv = $("confetti"); if (!cv || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const ctx = cv.getContext("2d"), W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio;
+  const C = ["#E3B649", "#FFE48A", "#EA0029", "#FFFFFF", "#4FD1C5", "#C9D2DA"];
+  const P = Array.from({ length: n }, () => ({ x: Math.random() * W, y: -Math.random() * H * .6, w: (6 + Math.random() * 8) * devicePixelRatio, h: (10 + Math.random() * 12) * devicePixelRatio, vy: (2 + Math.random() * 4) * devicePixelRatio, vx: (Math.random() - .5) * 2.4 * devicePixelRatio, r: Math.random() * 6, vr: (Math.random() - .5) * .2, c: C[Math.floor(Math.random() * C.length)] }));
+  const id = ++confT, t0 = performance.now();
+  (function f(t){
+    if (id !== confT || $("rev").hidden) { ctx.clearRect(0, 0, W, H); return; }
+    ctx.clearRect(0, 0, W, H);
+    P.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - (t - t0) / 6500); ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); });
+    if (t - t0 < 6500) requestAnimationFrame(f); else ctx.clearRect(0, 0, W, H);
+  })(t0);
+}
 function revRender() {
   const top = RC.rows.slice(0, 3), steps = top.length + 2; // intro, n lugares, podio
   const body = $("revBody");
   if (step === 0) body.innerHTML = `<div class="intro"><small>${esc(CONCURSO)}</small>Y las mejores prácticas BDC de la red son…</div>`;
   else if (step <= top.length) {
     const pos = top.length - step + 1, r = top[pos - 1], m = MED[pos];
-    body.innerHTML = `<div class="place p${pos}" style="--mc:${m.c}"><div class="medal"><span>${pos}</span></div><div class="lbl">${m.l}</div><div class="nm">${esc(r.f.practica)}</div><div class="ag">${esc(r.f.agencia)}</div>${r.f.lider ? `<div class="hint" style="font-size:1.2em">${esc(r.f.lider)}</div>` : ""}${showSc ? `<div class="sc"><div><b>${fmt(r.fin)}</b>puntaje final</div><div><b>${fmt(r.dS, 1)}%</b>Dirección</div><div><b>${fmt(r.pS, 1)}%</b>Líderes BDC</div></div>` : ""}</div>`;
+    body.innerHTML = `<div class="place p${pos}" style="--mc:${m.c}"><div class="glow"></div>${awardSVG(pos)}<div class="lbl">${m.l}</div><div class="nm">${esc(r.f.practica)}</div><div class="ag">${esc(r.f.agencia)}</div>${r.f.lider ? `<div class="ld"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}${showSc ? `<div class="sc"><div><b>${fmt(r.fin)}</b>puntaje final</div><div><b>${fmt(r.dS, 1)}%</b>Dirección</div><div><b>${fmt(r.pS, 1)}%</b>Líderes BDC</div></div>` : ""}</div>`;
   } else {
-    const o = [top[1], top[0], top[2]], cls = ["s", "g", "bz"], ps = [2, 1, 3];
-    body.innerHTML = `<div class="podium">${o.map((r, k) => r ? `<div class="pod ${cls[k]}" style="--mc:${MED[ps[k]].c}"><div class="n">${ps[k]}º</div><div class="t">${esc(r.f.practica)}</div><div class="a">${esc(r.f.agencia)}</div>${showSc ? `<div class="num" style="font-weight:700">${fmt(r.fin)} pts</div>` : ""}</div>` : "<div></div>").join("")}</div>`;
+    const o = [top[1], top[0], top[2]], ps = [2, 1, 3];
+    body.innerHTML = `<div class="pod3">${o.map((r, k) => r ? `<div class="pcol c${ps[k]}" style="--mc:${MED[ps[k]].c}">${awardSVG(ps[k])}<div class="t">${esc(r.f.practica)}</div><div class="a">${esc(r.f.agencia)}</div>${r.f.lider ? `<div class="l"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}${showSc ? `<div class="pts">${fmt(r.fin)} pts</div>` : ""}<div class="step"><span>${ps[k]}º</span></div></div>` : "<div></div>").join("")}</div>`;
   }
+  if (step === steps - 1) confetti(260); else if (step === top.length) confetti(160); else confT++;
   const nxt = step === 0 ? `Siguiente: ${MED[top.length].l.toLowerCase()}` : step < top.length ? `Siguiente: ${MED[top.length - step].l.toLowerCase()}` : step === top.length ? "Siguiente: podio completo" : "Podio completo";
   $("revInfo").textContent = nxt + " · Barra espaciadora o → para avanzar";
   $("rPrev").disabled = step === 0; $("rNext").disabled = step >= steps - 1;
@@ -528,7 +591,6 @@ const revClose = () => { $("rev").hidden = true; if (document.fullscreenElement)
 $("rExit").onclick = revClose;
 $("rNext").onclick = () => { if (!$("rNext").disabled) { step++; revRender(); } };
 $("rPrev").onclick = () => { if (step > 0) { step--; revRender(); } };
-$("rScores").onclick = () => { showSc = !showSc; $("rScores").textContent = showSc ? "Ocultar puntajes" : "Mostrar puntajes"; revRender(); };
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   if (!$("rev").hidden) { if (e.key === "Escape") revClose(); else if (e.key === " " || e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); $("rNext").click(); } else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); $("rPrev").click(); } return; }

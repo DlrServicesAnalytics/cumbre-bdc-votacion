@@ -218,7 +218,7 @@ try {
   S = await store();
   S.watchConfig(c => {
     const prevOpen = CFG?.abierta; CFG = c || { abierta: false, modo: "top3", finalistas: [] };
-    if (!$("sLoad").hidden) reset();
+    if (!$("sLoad").hidden){ reset(); const pc = new URLSearchParams(location.hash.slice(1)).get("c"); if (/^\d{4}$/.test(pc || "")){ history.replaceState(null, "", location.pathname + location.search); $("pin").value = pc; $("sCode").requestSubmit(); } }
     if (!$("sBallot").hidden) ballot();
     if (V.waiting && CFG.abierta && !prevOpen && !$("sMsg").hidden) { V.waiting = false; V.picks = []; ballot(); show("sBallot", 2); }
   }, () => { if (!$("sLoad").hidden) msg("Sin conexión", "No pudimos conectar con la votación. Revisa tu internet y vuelve a cargar la página.", "Reintentar", () => location.reload()); });
