@@ -238,9 +238,9 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
       </div>
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h3>Jurado directivo</h3><span class="tag dir" id="tDir"></span></div>
-        <p class="hint">Un directivo por línea: <b>Nombre, Puesto</b>. Se genera un código de 4 dígitos que no choca con ninguna agencia. Si ya tienes tarjetas impresas, agrega su código: <b>Directivo 01, 1573</b>. Sus nombres no son visibles para los votantes.</p>
-        <textarea id="gDir" placeholder="Nombre Apellido, Dirección Comercial&#10;Nombre Apellido, Gerencia de Red"></textarea>
-        <div class="row"><button class="b pri" id="bDir">Generar códigos de directivos</button><button class="b" id="bTarj">Descargar tarjetas de directivos</button></div>
+        <p class="hint">Pega la lista de las tarjetas impresas, una por línea: <b>Jurado 01, 1573</b>. Está en el archivo <b>Codigos_directivos_para_tablero.txt</b>. Las tarjetas de Equipo CDK no se registran porque no votan.</p>
+        <textarea id="gDir" placeholder="Jurado 01, 1573&#10;Jurado 02, 7112&#10;Jurado 03, 5821"></textarea>
+        <div class="row"><button class="b pri" id="bDir">Registrar jurado</button></div>
       </div>
     </div>
     <div class="panel">
@@ -415,7 +415,7 @@ function renderCodigos() {
     (L.length ? L.map(c => `<tr><td class="code">${esc(c.id)}</td><td><span class="tag ${c.seg}">${c.seg === "dir" ? "Directivo" : "Agencia"}</span> ${c.prueba ? '<span class="tag test">Prueba</span>' : ""}</td><td>${esc(c.agencia || c.nombre)}</td><td class="pend">${esc(c.puesto || "")}</td><td>${us.has(c.id) ? '<span class="ok">Votó</span>' : '<span class="pend">Pendiente</span>'}</td><td>${us.has(c.id) ? "" : `<button class="b dan" style="padding:4px 9px;font-size:12px" data-del="${esc(c.id)}">Quitar</button>`}</td></tr>`).join("")
       : `<tr><td colspan="6" class="pend">${D.padron.length ? "Ningún código coincide." : "Aún no hay códigos. Registra las agencias con el código de su ficha y genera los de directivos."}</td></tr>`) + "</tbody>";
   $("cTable").querySelectorAll("[data-del]").forEach(b => { const id = b.dataset.del; arm(b, "Quitar", async () => { try { await S.delCodes([id]); setMsg("gMsg", "ok", `Código ${id} eliminado.`); } catch (e) { setMsg("gMsg", "err", "No se pudo eliminar el código."); } }); });
-  $("bTarj").disabled = !nD; $("bCsv").disabled = !D.padron.length;
+  $("bCsv").disabled = !D.padron.length;
 }
 let finDraft = null;
 function renderFinalistas(force) {
@@ -483,7 +483,7 @@ async function register(entries, preBad = []) {
 }
 $("bAg").onclick = async () => { const { out, bad } = parseAg($("gAg").value); if (!out.length && !bad.length) { setMsg("gMsg", "err", "Pega al menos una línea: Agencia, código."); return; } if (await register(out, bad)) $("gAg").value = ""; };
 $("fCsv").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const { out, bad } = parseAg(String(r.result)); await register(out, bad); e.target.value = ""; }; r.readAsText(f, "utf-8"); };
-$("bDir").onclick = async () => { const ent = $("gDir").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).filter(l => !/^(nombre|directivo)\s*[,;\t]\s*(puesto|c[oó]digo)/i.test(l)).map(l => { const parts = l.split(/[,;\t]/).map(x => x.trim()).filter(Boolean); const ci = parts.findIndex(x => /^\d{4}$/.test(x)); const code = ci >= 0 ? parts.splice(ci, 1)[0] : undefined; return { seg: "dir", nombre: parts[0] || "", puesto: parts.slice(1).join(", "), code }; }); if (!ent.length) { setMsg("gMsg", "err", "Escribe al menos un directivo: Nombre, Puesto."); return; } if (await register(ent)) $("gDir").value = ""; };
+$("bDir").onclick = async () => { const ent = $("gDir").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).filter(l => !/^(nombre|directivo)\s*[,;\t]\s*(puesto|c[oó]digo)/i.test(l)).map(l => { const parts = l.split(/[,;\t]/).map(x => x.trim()).filter(Boolean); const ci = parts.findIndex(x => /^\d{4}$/.test(x)); const code = ci >= 0 ? parts.splice(ci, 1)[0] : undefined; return { seg: "dir", nombre: parts[0] || "", puesto: parts.slice(1).join(", "), code }; }); if (!ent.length) { setMsg("gMsg", "err", "Pega al menos una tarjeta: Jurado 01, 1573."); return; } const sin = ent.filter(e => !e.code); if (sin.length) { setMsg("gMsg", "err", `Falta el código de 4 dígitos en: ${sin.slice(0, 3).map(e => e.nombre || "(línea vacía)").join(", ")}${sin.length > 3 ? "…" : ""}. Usa el formato Jurado 01, 1573.`); return; } if (await register(ent)) $("gDir").value = ""; };
 $("bTest").onclick = async () => {
   const ent = [...Array.from({ length: 8 }, (_, i) => ({ seg: "part", agencia: "Agencia de prueba " + pad2(i + 1), prueba: true })), ...Array.from({ length: 4 }, (_, i) => ({ seg: "dir", nombre: "Directivo de prueba " + pad2(i + 1), puesto: "Prueba", prueba: true }))];
   await register(ent);
@@ -496,7 +496,7 @@ arm($("bTestDel"), "Borrar códigos de prueba", async () => {
 });
 $("cFilter").onchange = renderCodigos; $("cSearch").oninput = renderCodigos;
 $("bCsv").onclick = () => { const us = usedSet(); download("Codigos_Votacion_BDC.csv", "﻿" + [["Código", "Tipo", "Agencia / Nombre", "Puesto", "Prueba", "Estado"], ...D.padron.map(c => [c.id, c.seg === "dir" ? "Directivo" : "Agencia", c.agencia || c.nombre, c.puesto, c.prueba ? "Sí" : "No", us.has(c.id) ? "Votó" : "Pendiente"])].map(r => r.map(csvq).join(",")).join("\r\n"), "text/csv;charset=utf-8"); };
-$("bTarj").onclick = () => {
+const bTarjOff = () => {
   const L = D.padron.filter(c => c.seg === "dir"), logo = (() => { try { const i = document.querySelector(".lg .kia"); const c = document.createElement("canvas"); c.width = i.naturalWidth; c.height = i.naturalHeight; c.getContext("2d").drawImage(i, 0, 0); return c.toDataURL(); } catch (e) { return ""; } })();
   const cards = L.map(c => `<div class="card"><div class="hd">${logo ? `<img src="${logo}" alt="Kia">` : ""}<span>${esc(EVENTO)}</span></div><div class="ti">Jurado directivo · Voto confidencial</div><div class="who">${esc(c.nombre)}</div><div class="sub">${esc(c.puesto)}</div><div class="lbl">Tu código de votación</div><div class="cd">${esc(c.id.split("").join(" "))}</div><div class="ins">Entra a la página de votación y escribe este código. Es personal: no lo compartas.</div><div class="url">${esc(URL_VOTO.replace(/^https?:\/\//, ""))}</div></div>`).join("");
   download("Tarjetas_Jurado_Directivo_CONFIDENCIAL.html", `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tarjetas jurado directivo</title><style>@page{size:letter;margin:12mm}body{font-family:Inter,Arial,sans-serif;color:#05141F;margin:0}h1{font-size:14px;margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6mm}.card{border:1px dashed #B9C2CE;text-align:center;break-inside:avoid;page-break-inside:avoid;display:flex;flex-direction:column;align-items:center;gap:4px;padding-bottom:10px}.hd{background:#05141F;color:#fff;width:100%;padding:9px 0;font-size:10px;letter-spacing:.06em;display:flex;flex-direction:column;align-items:center;gap:6px;border-bottom:4px solid #3DD6C4}.hd img{height:14px}.ti{font-size:10.5px;color:#5A6576;margin-top:6px}.who{font-size:15px;font-weight:bold}.sub{font-size:11px;color:#5A6576;min-height:13px}.lbl{font-size:10.5px;color:#5A6576;margin-top:8px}.cd{font-size:30px;font-weight:800;letter-spacing:.15em}.ins{font-size:9.5px;color:#5A6576;max-width:52mm}.url{font-size:8px;color:#8A94A4;overflow-wrap:anywhere;max-width:56mm}</style></head><body><h1>Tarjetas del jurado directivo · Confidencial · Entregar en mano · Ctrl/Cmd + P para imprimir</h1><div class="grid">${cards}</div></body></html>`, "text/html;charset=utf-8");
