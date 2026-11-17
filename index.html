@@ -92,7 +92,7 @@ footer{text-align:center;font-size:11px;color:var(--mute);padding:10px 16px 30px
 
   <div class="card" id="sWho" hidden>
     <h2 id="wTitle">Confirma tu registro</h2>
-    <div class="who"><span class="tag" id="wTag"></span><span class="nm" id="wName"></span></div>
+    <div class="who"><span class="tag" id="wTag"></span><span class="nm" id="wName"></span><span class="help" id="wSub"></span></div>
     <p class="help" id="wHelp">Si no corresponde a tu agencia, revisa el código que escribiste.</p>
     <button class="btn" id="bYes" type="button">Sí, continuar a votar</button>
     <button class="btn alt" id="bProj" type="button" hidden>Revisar proyectos finalistas</button>
@@ -168,7 +168,7 @@ const lkSet = v => { try { localStorage.setItem(LOCK.key, JSON.stringify(v)); } 
 const need = () => (CFG?.modo === "unico" ? 1 : 3);
 const fin = () => (CFG?.finalistas || []);
 
-function reset() { Object.assign(V, { code: null, seg: null, agencia: "", picks: [], waiting: false, used: false, autoRev: false }); $("pin").value = ""; $("eCode").textContent = ""; show("sCode", 1); setTimeout(() => $("pin").focus(), 60); }
+function reset() { Object.assign(V, { code: null, seg: null, agencia: "", nombre: "", picks: [], waiting: false, used: false, autoRev: false }); $("pin").value = ""; $("eCode").textContent = ""; show("sCode", 1); setTimeout(() => $("pin").focus(), 60); }
 
 $("pin").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); $("eCode").textContent = ""; });
 $("sCode").addEventListener("submit", async e => {
@@ -187,9 +187,10 @@ $("sCode").addEventListener("submit", async e => {
     lkSet({ n: 0, until: 0 });
     const used = await S.getUsado(code);
     if (used && !CFG?.revisar) { msg("Este código ya votó", "Cada código vale un solo voto. Si tú no votaste, avisa al staff de la cumbre.", "Usar otro código", reset); return; }
-    Object.assign(V, { code, seg: c.seg, agencia: c.agencia || "", used });
+    Object.assign(V, { code, seg: c.seg, agencia: c.agencia || "", nombre: c.nombre || "", used });
     $("wTag").textContent = SEG[c.seg] || "Votante"; $("wTag").className = "tag " + c.seg;
-    $("wName").textContent = c.seg === "dir" ? "Código de jurado directivo" : (c.agencia || "Agencia registrada");
+    $("wName").textContent = V.nombre || (c.seg === "dir" ? "Código de jurado directivo" : (c.agencia || "Agencia registrada"));
+    $("wSub").textContent = V.nombre && c.seg !== "dir" ? (c.agencia || "") : "";
     hub();
     if (V.autoRev && CFG?.revisar) { V.autoRev = false; proyectos(); }
   } catch (ex) { err.textContent = "No se pudo validar el código. Revisa tu conexión a internet e inténtalo de nuevo."; }
@@ -198,10 +199,11 @@ $("sCode").addEventListener("submit", async e => {
 $("bNo").onclick = reset; $("bAgain").onclick = reset;
 
 /* ---------- revisar proyectos ---------- */
+const quien = () => V.nombre ? V.nombre + (V.seg === "dir" ? "" : " · " + (V.agencia || "")) : (V.seg === "dir" ? "Jurado directivo" : (V.agencia || "Tu agencia"));
 const slug = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 function hub() {
-  $("wTitle").textContent = V.used ? "Tu voto ya está registrado" : "Confirma tu registro";
-  $("wHelp").textContent = V.used ? "Cada código vale un solo voto. Puedes consultar los proyectos finalistas." : "Si no corresponde a tu agencia, revisa el código que escribiste.";
+  $("wTitle").textContent = V.used ? "Tu voto ya está registrado" : (V.nombre ? `Hola, ${V.nombre.split(" ")[0]}` : "Confirma tu registro");
+  $("wHelp").textContent = V.used ? "Cada código vale un solo voto. Puedes consultar los proyectos finalistas." : (V.nombre ? "Si no eres tú, revisa el código que escribiste." : "Si no corresponde a tu agencia, revisa el código que escribiste.");
   $("bYes").hidden = V.used;
   $("bProj").hidden = !CFG?.revisar;
   $("bNo").textContent = V.used ? "Usar otro código" : "No, escribir otro código";
@@ -209,7 +211,7 @@ function hub() {
 }
 function proyectos() {
   const en = V.seg === "dir";
-  $("pWho").innerHTML = `<b>${esc(V.seg === "dir" ? "Jurado directivo" : (V.agencia || "Tu agencia"))}</b>`;
+  $("pWho").innerHTML = `<b>${esc(quien())}</b>`;
   $("pHelp").textContent = en ? "Consulta el resumen ejecutivo de cada proyecto en español o en inglés. Se abre en una pestaña nueva." : "Consulta el resumen ejecutivo de cada proyecto. Se abre en una pestaña nueva.";
   $("plist").innerHTML = fin().map((f, i) => { const sl = slug(f.agencia); return `<div class="pj"><span class="k">${esc(f.clave || String(i + 1).padStart(2, "0"))}</span><div class="t">${esc(f.practica)}</div><div class="s">${esc(f.agencia)}${f.lider ? " · " + esc(f.lider) : ""}</div><div class="docs"><a href="proyectos/${sl}_ES.pdf" target="_blank" rel="noopener">Resumen en español</a>${en ? `<a class="en" href="proyectos/${sl}_EN.pdf" target="_blank" rel="noopener" lang="en">Executive summary (English)</a>` : ""}</div></div>`; }).join("") || `<p class="help">Aún no hay proyectos finalistas publicados.</p>`;
   show("sProj", null);
@@ -223,7 +225,7 @@ $("bYes").onclick = () => {
 
 function ballot() {
   const n = need();
-  $("bWho").innerHTML = `<b>${esc(V.seg === "dir" ? "Jurado directivo" : (V.agencia || "Tu agencia"))}</b>`;
+  $("bWho").innerHTML = `<b>${esc(quien())}</b>`;
   $("bTag").textContent = SEG[V.seg]; $("bTag").className = "tag " + V.seg;
   $("bTitle").textContent = n === 3 ? "Elige las 3 mejores prácticas" : "Elige la mejor práctica";
   $("bHelp").textContent = n === 3 ? "Toca en orden: la primera que elijas es tu 1er lugar (3 puntos), luego el 2º (2 puntos) y el 3º (1 punto). Toca de nuevo para quitarla." : "Toca la práctica que quieres votar. Toca de nuevo para quitarla.";
@@ -243,7 +245,7 @@ $("bSend").onclick = async () => {
   const b = $("bSend"), err = $("eSend"); b.disabled = true; b.textContent = "Enviando…"; err.textContent = "";
   try {
     await S.votar(V.code, V.seg, V.picks.slice());
-    $("dTxt").textContent = `${V.seg === "dir" ? "Jurado directivo" : (V.agencia || "Tu agencia")} · ${new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`;
+    $("dTxt").textContent = `${quien()} · ${new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`;
     show("sDone", null);
   } catch (e) {
     if (e.code === "denied") {
