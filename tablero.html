@@ -159,6 +159,23 @@ input[type=range]{width:100%;padding:0;border:0;accent-color:var(--acc);backgrou
 .step{width:100%;border-radius:.6em .6em 0 0;background:linear-gradient(180deg,color-mix(in srgb,var(--mc) 38%,var(--panel)) 0%,var(--panel) 100%);border-top:.35em solid var(--mc);display:grid;place-items:start center;padding-top:.6em}
 .step span{font-size:4em;font-weight:900;color:var(--mc);line-height:1}
 .c1 .step{height:12em}.c2 .step{height:8.5em}.c3 .step{height:6em}
+/* fotos de líderes en la premiación */
+.ph{position:relative;width:15em;height:15em;margin-bottom:.4em;animation:pop .9s cubic-bezier(.2,1.4,.4,1) both}
+.place.p1 .ph{width:18em;height:18em}
+.ph img{width:100%;height:100%;object-fit:cover;border-radius:50%;border:.42em solid var(--mc);box-shadow:0 0 0 .5em rgba(255,255,255,.06),0 0 5em color-mix(in srgb,var(--mc) 45%,transparent);display:block;background:var(--panel)}
+.ph .bdg{position:absolute;right:-1.6em;bottom:-1em;width:7em}
+.place.p1 .ph .bdg{width:8.4em;right:-2em}
+.ph .bdg .aw{width:100%!important;animation:none}
+.ph.nf{width:auto!important;height:auto!important}.ph.nf .bdg{position:static;width:10em}
+.place .nm{font-size:3.6em}.place.p1 .nm{font-size:4.4em}
+.place .ld{order:0}
+.pph{position:relative;width:9.5em;height:9.5em;margin-bottom:.3em}
+.pcol.c1 .pph{width:12em;height:12em}
+.pph img{width:100%;height:100%;object-fit:cover;border-radius:50%;border:.35em solid var(--mc);box-shadow:0 0 3em color-mix(in srgb,var(--mc) 40%,transparent);display:block;background:var(--panel)}
+.pph .bdg{position:absolute;right:-1.2em;bottom:-.8em;width:4.6em}
+.pcol.c1 .pph .bdg{width:5.6em}
+.pph .bdg .aw{width:100%!important}
+.pph.nf{width:auto!important;height:auto!important}.pph.nf .bdg{position:static;width:6.4em}
 #confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
 #rev .rb{position:relative;z-index:2}
 @keyframes pop{0%{opacity:0;transform:scale(.4) rotate(-8deg)}100%{opacity:1;transform:none}}
@@ -282,6 +299,11 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
       <h3>Estado de la votación</h3>
       <div class="row"><button class="b pri" id="bOpen" style="font-size:16px;padding:12px 20px"></button><span class="hint" id="openHint"></span></div>
     </div>
+    <div class="panel">
+      <h3>Revisión de proyectos</h3>
+      <div class="row"><button class="b pri" id="bRevisar" style="font-size:16px;padding:12px 20px"></button><span class="hint" id="revisarHint"></span></div>
+      <p class="hint">Activa el botón «Revisar proyectos finalistas» en la página de votación. El jurado directivo ve el resumen ejecutivo en español e inglés; los Líderes BDC, solo en español. Funciona aunque la votación esté cerrada.</p>
+    </div>
     <div class="grid2">
       <div class="panel">
         <h3>Mecánica de voto</h3>
@@ -371,6 +393,9 @@ function renderStatus() {
   $("pClosed").hidden = on;
   $("bOpen").textContent = on ? "Cerrar votación" : "Abrir votación";
   $("openHint").textContent = on ? "Los votantes pueden enviar su voto ahora." : "Los votantes pueden validar su código, pero no enviar votos.";
+  const rv = !!D.cfg.revisar;
+  $("bRevisar").textContent = rv ? "Desactivar revisión de proyectos" : "Activar revisión de proyectos";
+  $("revisarHint").textContent = rv ? "Activa: los votantes ven el botón «Revisar proyectos finalistas»." : "Desactivada: el botón no aparece en la página de votación.";
 }
 function renderPantalla(C) {
   $("pDir").innerHTML = `${C.cD}<small> / ${C.nD}</small>`; $("pPart").innerHTML = `${C.cP}<small> / ${C.nP}</small>`;
@@ -515,6 +540,10 @@ $("bOpen").onclick = async () => {
   const abrir = !D.cfg.abierta;
   try { await S.setConfig({ abierta: abrir, modo: D.cfg.modo || "top3", pesoDir: D.cfg.pesoDir ?? 70 }); setMsg("ctrlMsg", "ok", abrir ? "Votación abierta." : "Votación cerrada a las " + new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + "."); } catch (e) { setMsg("ctrlMsg", "err", "No se pudo cambiar el estado."); }
 };
+$("bRevisar").onclick = async () => {
+  const on = !D.cfg.revisar;
+  try { await S.setConfig({ revisar: on }); setMsg("ctrlMsg", "ok", on ? "Revisión de proyectos activada." : "Revisión de proyectos desactivada."); } catch (e) { setMsg("ctrlMsg", "err", "No se pudo cambiar la revisión de proyectos."); }
+};
 $("mTop3").onclick = () => S.setConfig({ modo: "top3" }); $("mUnico").onclick = () => S.setConfig({ modo: "unico" });
 $("wDir").oninput = e => { $("wDirV").textContent = `${e.target.value}% Dirección · ${100 - e.target.value}% Líderes BDC`; };
 $("wDir").onchange = e => S.setConfig({ pesoDir: +e.target.value });
@@ -533,6 +562,8 @@ $("bActa").onclick = () => {
 
 /* ---------- revelación: 3º → 2º → 1º → podio ---------- */
 let step = 0, showSc = false, RC = null;
+const slug = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const foto = (f, cls, pos) => `<div class="${cls}"><img src="assets/lideres/${slug(f.agencia)}.jpg" alt="${esc(f.lider || f.agencia)}" onerror="this.parentNode.classList.add('nf');this.remove()"><span class="bdg">${awardSVG(pos)}</span></div>`;
 const MED = [null, { c: "var(--gold)", l: "Primer lugar" }, { c: "var(--silver)", l: "Segundo lugar" }, { c: "var(--bronze)", l: "Tercer lugar" }];
 const METAL = { 1:["#8A6510","#FFE48A","#E3B649"], 2:["#7C8792","#F4F7FA","#C9D2DA"], 3:["#6E3F1E","#F3B988","#D08F5B"] };
 function awardSVG(pos){
@@ -576,10 +607,10 @@ function revRender() {
   if (step === 0) body.innerHTML = `<div class="intro"><small>${esc(CONCURSO)}</small>Y las mejores prácticas BDC de la red son…</div>`;
   else if (step <= top.length) {
     const pos = top.length - step + 1, r = top[pos - 1], m = MED[pos];
-    body.innerHTML = `<div class="place p${pos}" style="--mc:${m.c}"><div class="glow"></div>${awardSVG(pos)}<div class="lbl">${m.l}</div><div class="nm">${esc(r.f.practica)}</div><div class="ag">${esc(r.f.agencia)}</div>${r.f.lider ? `<div class="ld"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}${showSc ? `<div class="sc"><div><b>${fmt(r.fin)}</b>puntaje final</div><div><b>${fmt(r.dS, 1)}%</b>Dirección</div><div><b>${fmt(r.pS, 1)}%</b>Líderes BDC</div></div>` : ""}</div>`;
+    body.innerHTML = `<div class="place p${pos}" style="--mc:${m.c}"><div class="glow"></div>${foto(r.f, "ph", pos)}<div class="lbl">${m.l}</div><div class="nm">${esc(r.f.practica)}</div>${r.f.lider ? `<div class="ld"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}<div class="ag">${esc(r.f.agencia)}</div>${showSc ? `<div class="sc"><div><b>${fmt(r.fin)}</b>puntaje final</div><div><b>${fmt(r.dS, 1)}%</b>Dirección</div><div><b>${fmt(r.pS, 1)}%</b>Líderes BDC</div></div>` : ""}</div>`;
   } else {
     const o = [top[1], top[0], top[2]], ps = [2, 1, 3];
-    body.innerHTML = `<div class="pod3">${o.map((r, k) => r ? `<div class="pcol c${ps[k]}" style="--mc:${MED[ps[k]].c}">${awardSVG(ps[k])}<div class="t">${esc(r.f.practica)}</div><div class="a">${esc(r.f.agencia)}</div>${r.f.lider ? `<div class="l"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}${showSc ? `<div class="pts">${fmt(r.fin)} pts</div>` : ""}<div class="step"><span>${ps[k]}º</span></div></div>` : "<div></div>").join("")}</div>`;
+    body.innerHTML = `<div class="pod3">${o.map((r, k) => r ? `<div class="pcol c${ps[k]}" style="--mc:${MED[ps[k]].c}">${foto(r.f, "pph", ps[k])}<div class="t">${esc(r.f.practica)}</div>${r.f.lider ? `<div class="l"><small>Líder BDC</small>${esc(r.f.lider)}</div>` : ""}<div class="a">${esc(r.f.agencia)}</div>${showSc ? `<div class="pts">${fmt(r.fin)} pts</div>` : ""}<div class="step"><span>${ps[k]}º</span></div></div>` : "<div></div>").join("")}</div>`;
   }
   if (step === steps - 1) confetti(260); else if (step === top.length) confetti(160); else confT++;
   const nxt = step === 0 ? `Siguiente: ${MED[top.length].l.toLowerCase()}` : step < top.length ? `Siguiente: ${MED[top.length - step].l.toLowerCase()}` : step === top.length ? "Siguiente: podio completo" : "Podio completo";
