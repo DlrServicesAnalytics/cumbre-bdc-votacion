@@ -257,7 +257,7 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
         <div class="row" style="justify-content:space-between"><h3>Jurado directivo</h3><span class="tag dir" id="tDir"></span></div>
         <p class="hint">Pega la lista de las tarjetas impresas, una por línea: <b>Jurado 01, 1573</b>. Está en el archivo <b>Codigos_directivos_para_tablero.txt</b>. Las tarjetas de Equipo CDK no se registran porque no votan.</p>
         <textarea id="gDir" placeholder="Jurado 01, 1573&#10;Jurado 02, 7112&#10;Jurado 03, 5821"></textarea>
-        <div class="row"><button class="b pri" id="bDir">Registrar jurado</button></div>
+        <div class="row"><button class="b pri" id="bDir">Registrar jurado</button><label class="b" for="fDirCsv" style="display:inline-block">Importar CSV</label><input type="file" id="fDirCsv" accept=".csv,.txt,text/csv" hidden></div>
       </div>
     </div>
     <div class="panel">
@@ -303,6 +303,11 @@ body.fs .top{display:none}body.fs .scr{min-height:100vh}
       <h3>Revisión de proyectos</h3>
       <div class="row"><button class="b pri" id="bRevisar" style="font-size:16px;padding:12px 20px"></button><span class="hint" id="revisarHint"></span></div>
       <p class="hint">Activa el botón «Revisar proyectos finalistas» en la página de votación. El jurado directivo ve el resumen ejecutivo en español e inglés; los Líderes BDC, solo en español. Funciona aunque la votación esté cerrada.</p>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h3>Fichas de las agencias</h3><span class="tag" id="fTag"></span></div>
+      <p class="hint">Las fichas permanecen bloqueadas durante la conferencia “BDC como motor estratégico de ventas”. Al abrirlas, se desbloquean solas en todos los celulares en unos segundos. El portal de directivos no se bloquea.</p>
+      <div class="row"><button class="b pri" id="bFichas" style="font-size:16px;padding:12px 20px"></button><span class="hint" id="fichasHint"></span></div>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -396,6 +401,9 @@ function renderStatus() {
   const rv = !!D.cfg.revisar;
   $("bRevisar").textContent = rv ? "Desactivar revisión de proyectos" : "Activar revisión de proyectos";
   $("revisarHint").textContent = rv ? "Activa: los votantes ven el botón «Revisar proyectos finalistas»." : "Desactivada: el botón no aparece en la página de votación.";
+  const fo = !!D.cfg.fichas; $("bFichas").textContent = fo ? "Bloquear fichas" : "Abrir fichas";
+  $("bFichas").className = "b " + (fo ? "dan" : "pri"); $("fTag").textContent = fo ? "Abiertas" : "Bloqueadas"; $("fTag").className = "tag " + (fo ? "dir" : "test");
+  $("fichasHint").textContent = fo ? "Las agencias pueden ver su ficha y enviar su plan." : "Las agencias ven el mensaje de espera hasta que las abras.";
 }
 function renderPantalla(C) {
   $("pDir").innerHTML = `${C.cD}<small> / ${C.nD}</small>`; $("pPart").innerHTML = `${C.cP}<small> / ${C.nP}</small>`;
@@ -508,7 +516,25 @@ async function register(entries, preBad = []) {
 }
 $("bAg").onclick = async () => { const { out, bad } = parseAg($("gAg").value); if (!out.length && !bad.length) { setMsg("gMsg", "err", "Pega al menos una línea: Agencia, código."); return; } if (await register(out, bad)) $("gAg").value = ""; };
 $("fCsv").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const { out, bad } = parseAg(String(r.result)); await register(out, bad); e.target.value = ""; }; r.readAsText(f, "utf-8"); };
-$("bDir").onclick = async () => { const ent = $("gDir").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).filter(l => !/^(nombre|directivo)\s*[,;\t]\s*(puesto|c[oó]digo)/i.test(l)).map(l => { const parts = l.split(/[,;\t]/).map(x => x.trim()).filter(Boolean); const ci = parts.findIndex(x => /^\d{4}$/.test(x)); const code = ci >= 0 ? parts.splice(ci, 1)[0] : undefined; return { seg: "dir", nombre: parts[0] || "", puesto: parts.slice(1).join(", "), code }; }); if (!ent.length) { setMsg("gMsg", "err", "Pega al menos una tarjeta: Jurado 01, 1573."); return; } const sin = ent.filter(e => !e.code); if (sin.length) { setMsg("gMsg", "err", `Falta el código de 4 dígitos en: ${sin.slice(0, 3).map(e => e.nombre || "(línea vacía)").join(", ")}${sin.length > 3 ? "…" : ""}. Usa el formato Jurado 01, 1573.`); return; } if (await register(ent)) $("gDir").value = ""; };
+function parseDir(text){
+  const ent = [], sin = [];
+  String(text).replace(/^\uFEFF/, "").split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
+    if (/c[oó]digo|^tarjeta\s*[,;\t]|^nombre\s*[,;\t]/i.test(l) || /cdk/i.test(l)) return;
+    const parts = l.split(/[,;\t]/).map(x => x.trim().replace(/^"|"$/g, "")).filter(Boolean);
+    const ci = parts.findIndex(x => /^\d{3,4}$/.test(x));
+    if (ci < 0){ sin.push(parts[0] || l); return; }
+    ent.push({ seg: "dir", nombre: parts[0] && ci !== 0 ? parts[0] : "Jurado", puesto: "", code: parts[ci].padStart(4, "0") });
+  });
+  return { ent, sin };
+}
+async function regDir(text){
+  const { ent, sin } = parseDir(text);
+  if (sin.length){ setMsg("gMsg", "err", `Falta el código de 4 dígitos en: ${sin.slice(0, 3).join(", ")}${sin.length > 3 ? "…" : ""}. Usa el formato Jurado 01, 1573.`); return false; }
+  if (!ent.length){ setMsg("gMsg", "err", "No encontré tarjetas de jurado. Usa el formato Jurado 01, 1573."); return false; }
+  return register(ent);
+}
+$("bDir").onclick = async () => { if (await regDir($("gDir").value)) $("gDir").value = ""; };
+$("fDirCsv").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { await regDir(String(r.result)); e.target.value = ""; }; r.readAsText(f, "utf-8"); };
 $("bTest").onclick = async () => {
   const ent = [...Array.from({ length: 8 }, (_, i) => ({ seg: "part", agencia: "Agencia de prueba " + pad2(i + 1), prueba: true })), ...Array.from({ length: 4 }, (_, i) => ({ seg: "dir", nombre: "Directivo de prueba " + pad2(i + 1), puesto: "Prueba", prueba: true }))];
   await register(ent);
@@ -534,6 +560,12 @@ $("fSave").onclick = async () => {
   if (list.some(f => !f.practica || !f.agencia)) { setMsg("fMsg", "err", "Completa el nombre de la práctica y la agencia de cada finalista, o quita las filas vacías."); return; }
   if (D.votos.length && list.length !== (D.cfg.finalistas || []).length) { setMsg("fMsg", "err", "Ya hay votos: no puedes cambiar el número de finalistas."); return; }
   try { await S.setConfig({ finalistas: list, modo: D.cfg.modo || "top3", pesoDir: D.cfg.pesoDir ?? 70 }); finDraft = null; renderFinalistas(true); setMsg("fMsg", "ok", "Finalistas guardados. Los votantes ya los ven."); } catch (e) { setMsg("fMsg", "err", "No se pudieron guardar."); }
+};
+$("bFichas").onclick = async () => {
+  const abrir = !D.cfg.fichas;
+  if (!abrir && !confirm("¿Bloquear las fichas? Las agencias que la abran verán el mensaje de espera.")) return;
+  try { await S.setConfig({ fichas: abrir }); setMsg("ctrlMsg", "ok", abrir ? "Fichas abiertas (" + new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + "). Se desbloquean solas en los celulares." : "Fichas bloqueadas."); }
+  catch (e) { setMsg("ctrlMsg", "err", "No se pudo cambiar. Revisa tu conexión e intenta de nuevo."); }
 };
 $("bOpen").onclick = async () => {
   if (!D.cfg.abierta && !(D.cfg.finalistas || []).length) { setMsg("ctrlMsg", "err", "Primero captura y guarda los finalistas."); return; }
