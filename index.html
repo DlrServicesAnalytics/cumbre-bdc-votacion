@@ -212,8 +212,8 @@ function hub() {
 function proyectos() {
   const en = V.seg === "dir";
   $("pWho").innerHTML = `<b>${esc(quien())}</b>`;
-  $("pHelp").textContent = en ? "Consulta el resumen ejecutivo de cada proyecto en español o en inglés. Se abre en una pestaña nueva." : "Consulta el resumen ejecutivo de cada proyecto. Se abre en una pestaña nueva.";
-  $("plist").innerHTML = fin().map((f, i) => { const sl = slug(f.agencia); return `<div class="pj"><span class="k">${esc(f.clave || String(i + 1).padStart(2, "0"))}</span><div class="t">${esc(f.practica)}</div><div class="s">${esc(f.agencia)}${f.lider ? " · " + esc(f.lider) : ""}</div><div class="docs"><a href="proyectos/${sl}_ES.pdf" target="_blank" rel="noopener">Resumen en español</a>${en ? `<a class="en" href="proyectos/${sl}_EN.pdf" target="_blank" rel="noopener" lang="en">Executive summary (English)</a>` : ""}</div></div>`; }).join("") || `<p class="help">Aún no hay proyectos finalistas publicados.</p>`;
+  $("pHelp").textContent = en ? "Toca para abrir el resumen ejecutivo de cada proyecto en español o en inglés. Para regresar, usa el botón Atrás de tu celular." : "Toca para abrir el resumen ejecutivo de cada proyecto. Para regresar, usa el botón Atrás de tu celular.";
+  $("plist").innerHTML = fin().map((f, i) => { const sl = slug(f.agencia); return `<div class="pj"><span class="k">${esc(f.clave || String(i + 1).padStart(2, "0"))}</span><div class="t">${esc(f.practica)}</div><div class="s">${esc(f.agencia)}${f.lider ? " · " + esc(f.lider) : ""}</div><div class="docs"><a href="proyectos/${sl}_ES.pdf">Resumen en español</a>${en ? `<a class="en" href="proyectos/${sl}_EN.pdf" lang="en">Executive summary (English)</a>` : ""}</div></div>`; }).join("") || `<p class="help">Aún no hay proyectos finalistas publicados.</p>`;
   show("sProj", null);
 }
 $("bProj").onclick = proyectos;
